@@ -94,22 +94,8 @@ def main():
         temperature, humidity = sensor.read()
         print('Temperature in Celsius is {:.2f} C'.format(temperature))
         print('Relative Humidity is {:.2f} %'.format(humidity))
- 	payload = '{{"fields": [{"ts": {}, "type": "DATETIME"},{"temperature": {}, "type": "FLOAT"}, {"humidity": {}, "type": "FLOAT"}]}}'.format(datetime.datetime.utcnow(), temperature, humidity)
-	output_format = """
-	{ 
-	    "fields": [
-	    	{"ts": {ts}, "type": "DATETIME"},
-		{"temperature": {temperature}, "type": "FLOAT"},
-		{"humidity": {humidity}, "type": "FLOAT"}
-	    ]
-	}
-	"""
-
-	payload = output_format.format(ts=atetime.datetime.utcnow(),
-                           temperature=temperature,
-                           humidity=humidity)
-	#payload = '{{ "ts": {}, "temperature": {}, "humidity": {}}}'.format(datetime.datetime.utcnow(), temperature, humidity)
-	#print("{}\n".format(payload))
+	payload =  '{{"ts": \"{}\", "temperature": {}, "humidity": {}}}'.format(datetime.datetime.utcnow().isoformat()[:-3], temperature, humidity)
+	print("{}\n".format(payload))
 	client.publish(_MQTT_TELEMETRY_TOPIC, payload, qos=1)
         time.sleep(60)
 
