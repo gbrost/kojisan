@@ -2,7 +2,15 @@ import datetime
 import time
 import jwt
 import paho.mqtt.client as mqtt
+import logging
+
 from grove.i2c import Bus
+
+LOG_LEVEL = logging.INFO
+
+LOG_FILE = "/var/log/sht35.log"
+LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
+logging.basicConfig(filename=LOG_FILE, format=LOG_FORMAT, level=LOG_LEVEL)
 
 ssl_private_key_filepath = '/home/pi/grove.py/kojibox_private.pem'
 ssl_algorithm = 'RS256' # Either RS256 or ES256
@@ -96,6 +104,7 @@ def main():
         print('Relative Humidity is {:.2f} %'.format(humidity))
 	payload =  '{{"ts": \"{}\", "temperature": {}, "humidity": {}}}'.format(datetime.datetime.utcnow().isoformat()[:-3], temperature, humidity)
 	print("{}\n".format(payload))
+	logging.info("{}\n".format(payload))
 	client.publish(_MQTT_TELEMETRY_TOPIC, payload, qos=1)
         time.sleep(60)
 
