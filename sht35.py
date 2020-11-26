@@ -1,6 +1,7 @@
 import datetime
 import time
 import logging
+import json
 from influxdb import InfluxDBClient
 from influxdb.client import InfluxDBClientError
 
@@ -13,7 +14,7 @@ LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
 logging.basicConfig(filename=LOG_FILE, format=LOG_FORMAT, level=LOG_LEVEL)
 USER = 'grafana'
 PASSWORD = '43ralight'
-DBNAME = 'mydb'
+DBNAME = 'kojibox'
 HOST='localhost'
 PORT=8086
 
@@ -42,9 +43,7 @@ class GroveTemperatureHumiditySensorSHT3x(object):
         time.sleep(0.016)
 
         # read 6 bytes back
-        # Temp MSB, Temp LSB, Temp 
-	
-	, Humididty MSB, Humidity LSB, Humidity CRC
+        # Temp MSB, Temp LSB, Temp, Humididty MSB, Humidity LSB, Humidity CRC
         data = self.bus.read_i2c_block_data(0x45, 0x00, 6)
         temperature = data[0] * 256 + data[1]
         celsius = -45 + (175 * temperature / 65535.0)
@@ -54,6 +53,20 @@ class GroveTemperatureHumiditySensorSHT3x(object):
         if data[5] != CRC(data[3:5]):
             raise RuntimeError("humidity CRC mismatch")
         return celsius, humidity
+
+def create_dictionary_for_value(temperature,humidity):
+    return [{
+            "measurement": "kojiboxclimate",
+    	    "tags": {
+                "host": "server01",
+                "region": "us-west"
+            },
+            "time": datetime.datetime.utcnow().isoformat(),
+            "fields": {
+                "temperature": temperature,
+		"humidity": humidity
+            }
+    }]
 
 def main():
     sensor = GroveTemperatureHumiditySensorSHT3x()
@@ -65,11 +78,15 @@ def main():
         temperature, humidity = sensor.read()
         print('Temperature in Celsius is {:.2f} C'.format(temperature))
         print('Relative Humidity is {:.2f} %'.format(humidity))
-	payload =  '{{"timestamp": \"{}\", "temperature": {}, "humidity": {}}}'.format(datetime.datetime.utcnow().isoformat()[:-3], temperature, humidity)
+	#payload =  '{{"timestamp": \"{}\", "temperature": {}, "humidity": {}}}'.format(datetime.datetime.utcnow().isoformat()[:-3], temperature, humidity)
+	payload = create_dictionary_for_value(temperature, humidity)
 	print("{}\n".format(payload))
-	client.write_points(payload, retention_policy=retention_policy)
+	client.write_points(payload, retention_policy=retention_policy, protocol='json')
 
 	logging.info("{}\n".format(payload))
+	result = client.query('select value from kojiboxclimate;')
+
+	print("Result: {0}".format(result))
         time.sleep(60)
 
 if __name__ == "__main__":
