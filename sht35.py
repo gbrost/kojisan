@@ -60,7 +60,7 @@ def create_dictionary_for_value(temperature,humidity):
         "tags": {
 		    "host": "kojisan"
         },
-        "time": datetime.datetime.utcnow().isoformat(),
+        "time": int(time.time() * 1000),
         "fields": {
             "temperature": temperature,
             "humidity": humidity
@@ -80,9 +80,9 @@ def main():
         print('Relative Humidity is {:.2f} %'.format(humidity))
         payload = create_dictionary_for_value(temperature, humidity)
         print("Payload:{}\n".format(payload))
-        client.write_points(payload, retention_policy=retention_policy)
+        client.write_points(payload, database='kojibox', time_precision='ms', protocol='json')
         logging.info("{}\n".format(payload))
-        result = client.query('select value from kojiboxclimate;')
+        result = client.query('select temperature,humidity from kojiboxclimate;')
         print("Result: {0}".format(result))
         time.sleep(60)
 
