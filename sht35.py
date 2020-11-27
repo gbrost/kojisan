@@ -19,16 +19,16 @@ HOST='localhost'
 PORT=8086
 
 def CRC(data):
-  crc = 0xff
-  for s in data:
-    crc ^= s
-    for i in range(8):
-      if crc & 0x80:
-        crc <<= 1
-        crc ^= 0x131
-      else:
-        crc <<= 1
-  return crc
+    crc = 0xff
+    for s in data:
+        crc ^= s
+        for i in range(8):
+          if crc & 0x80:
+              crc <<= 1
+              crc ^= 0x131
+          else:
+              crc <<= 1
+    return crc
 
 class GroveTemperatureHumiditySensorSHT3x(object):
     def __init__(self, address=0x45, bus=None):
@@ -56,40 +56,37 @@ class GroveTemperatureHumiditySensorSHT3x(object):
 
 def create_dictionary_for_value(temperature,humidity):
     return [{
-            "measurement": "kojiboxclimate",
-    	    "tags": {
-                "host": "server01",
-                "region": "us-west"
-            },
-            "time": datetime.datetime.utcnow().isoformat(),
-            "fields": {
-                "temperature": temperature,
-		"humidity": humidity
-            }
+        "measurement": "kojiboxclimate",
+        "tags": {
+		    "host": "kojisan"
+        },
+        "time": datetime.datetime.utcnow().isoformat(),
+        "fields": {
+            "temperature": temperature,
+            "humidity": humidity
+        }
     }]
 
 def main():
     sensor = GroveTemperatureHumiditySensorSHT3x()
-    client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DBNAME)
+    client = InfluxDBClient(host='localhost', port=8086)
     retention_policy = 'awesome_policy'
+    client.switch_database('kojibox')
     client.create_retention_policy(retention_policy, '3d', 3, default=True)
 
     while True:
         temperature, humidity = sensor.read()
         print('Temperature in Celsius is {:.2f} C'.format(temperature))
         print('Relative Humidity is {:.2f} %'.format(humidity))
-	#payload =  '{{"timestamp": \"{}\", "temperature": {}, "humidity": {}}}'.format(datetime.datetime.utcnow().isoformat()[:-3], temperature, humidity)
-	payload = create_dictionary_for_value(temperature, humidity)
-	print("{}\n".format(payload))
-	client.write_points(payload, retention_policy=retention_policy, protocol='json')
-
-	logging.info("{}\n".format(payload))
-	result = client.query('select value from kojiboxclimate;')
-
-	print("Result: {0}".format(result))
+        payload = create_dictionary_for_value(temperature, humidity)
+        print("Payload:{}\n".format(payload))
+        client.write_points(payload, retention_policy=retention_policy)
+        logging.info("{}\n".format(payload))
+        result = client.query('select value from kojiboxclimate;')
+        print("Result: {0}".format(result))
         time.sleep(60)
 
 if __name__ == "__main__":
-	main()
+    main()
 
 
