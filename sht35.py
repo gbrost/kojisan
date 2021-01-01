@@ -6,6 +6,7 @@ from influxdb import InfluxDBClient
 from influxdb.client import InfluxDBClientError
 
 from grove.i2c import Bus
+import seeed_ds18b20
 
 LOG_LEVEL = logging.INFO
 
@@ -73,16 +74,20 @@ def main():
     retention_policy = 'awesome_policy'
     client.switch_database('kojibox')
     client.create_retention_policy(retention_policy, '3d', 3, default=True)
+    DS18B20 = seeed_ds18b20.grove_ds18b20()
 
     while True:
         temperature, humidity = sensor.read()
         print('Temperature in Celsius is {:.2f} C'.format(temperature))
         print('Relative Humidity is {:.2f} %'.format(humidity))
-        payload = create_dictionary_for_value(temperature, humidity)
+	temperature_wire,temp_wire_f = DS18B20.read_temp
+        print('temperature_wire %.2f C   temp_wire_f %.2f F' % (temperature_wire,temp_wire_f),end=" ")
+        print('\r', end='')
+        payload = create_dictionary_for_value(temperature,temperature_wire, humidity)
         print("Payload:{}\n".format(payload))
         client.write_points(payload, database='kojibox', time_precision='ms', protocol='json')
         logging.info("{}\n".format(payload))
-        result = client.query('select temperature,humidity from kojiboxclimate;')
+        result = client.query('select temperature,humidity,temperature_wire from kojiboxclimate;')
         print("Result: {0}".format(result))
         time.sleep(60)
 
