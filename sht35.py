@@ -2,6 +2,7 @@ import datetime
 import time
 import logging
 import json
+from logging.handlers import RotatingFileHandler
 from influxdb import InfluxDBClient
 from influxdb.client import InfluxDBClientError
 
@@ -12,10 +13,6 @@ LOG_LEVEL = logging.INFO
 LOG_FILE = "/var/log/sht35.log"
 LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
 logging.basicConfig(filename=LOG_FILE, format=LOG_FORMAT, level=LOG_LEVEL)
-USER = 'grafana'
-PASSWORD = '43ralight'
-DBNAME = 'kojibox'
-HOST='localhost'
 PORT=8086
 
 def CRC(data):
@@ -82,8 +79,8 @@ def main():
         print("Payload:{}\n".format(payload))
         client.write_points(payload, database='kojibox', time_precision='ms', protocol='json')
         logging.info("{}\n".format(payload))
-        result = client.query('select temperature,humidity from kojiboxclimate;')
-        print("Result: {0}".format(result))
+        #result = client.query('select temperature,humidity from kojiboxclimate;')
+        #print("Result: {0}".format(result))
         time.sleep(60)
 
 if __name__ == "__main__":
