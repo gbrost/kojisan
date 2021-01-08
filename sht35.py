@@ -7,6 +7,7 @@ from influxdb import InfluxDBClient
 from influxdb.client import InfluxDBClientError
 
 from grove.i2c import Bus
+import seeed_ds18b20
 
 LOG_LEVEL = logging.INFO
 
@@ -51,7 +52,7 @@ class GroveTemperatureHumiditySensorSHT3x(object):
             raise RuntimeError("humidity CRC mismatch")
         return celsius, humidity
 
-def create_dictionary_for_value(temperature,humidity):
+def create_dictionary_for_value(temperature,temperature_wire,humidity):
     return [{
         "measurement": "kojiboxclimate",
         "tags": {
@@ -60,6 +61,7 @@ def create_dictionary_for_value(temperature,humidity):
         "time": int(time.time() * 1000),
         "fields": {
             "temperature": temperature,
+			"temperature_wire": temperature_wire,
             "humidity": humidity
         }
     }]
@@ -70,17 +72,20 @@ def main():
     retention_policy = 'awesome_policy'
     client.switch_database('kojibox')
     client.create_retention_policy(retention_policy, '3d', 3, default=True)
+    DS18B20 = seeed_ds18b20.grove_ds18b20()
 
     while True:
         temperature, humidity = sensor.read()
         print('Temperature in Celsius is {:.2f} C'.format(temperature))
         print('Relative Humidity is {:.2f} %'.format(humidity))
-        payload = create_dictionary_for_value(temperature, humidity)
+        temperature_wire,temp_wire_f = DS18B20.read_temp
+        print('Temperature on wire sensor is {:.2f} C'.format(temperature_wire))
+        payload = create_dictionary_for_value(temperature,temperature_wire, humidity)
         print("Payload:{}\n".format(payload))
         client.write_points(payload, database='kojibox', time_precision='ms', protocol='json')
         logging.info("{}\n".format(payload))
-        #result = client.query('select temperature,humidity from kojiboxclimate;')
-        #print("Result: {0}".format(result))
+        result = client.query('select temperature,humidity,temperature_wire from kojiboxclimate;')
+        print("Result: {0}".format(result))
         time.sleep(60)
 
 if __name__ == "__main__":
